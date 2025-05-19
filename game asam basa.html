@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>pH Sorting Game</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f5f7fa;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        
+        .game-title {
+            font-size: 24px;
+            margin-bottom: 20px;
+            color: #333;
+        }
+        
+        .game-area {
+            width: 100%;
+            max-width: 600px;
+        }
+        
+        .container {
+            border: 2px solid #ccc;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 15px;
+            min-height: 100px;
+            background-color: white;
+        }
+        
+        .container-title {
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #444;
+        }
+        
+        #initial-container {
+            border-color: #3498db;
+            background-color: #ebf5fb;
+        }
+        
+        #answer-container {
+            border-color: #2ecc71;
+            background-color: #eafaf1;
+        }
+        
+        .substance-box {
+            display: inline-block;
+            width: 100px;
+            height: 80px;
+            margin: 5px;
+            background-color: #3498db;
+            color: white;
+            font-size: 16px;
+            font-weight: bold;
+            text-align: center;
+            border-radius: 8px;
+            cursor: move;
+            user-select: none;
+            transition: transform 0.2s, box-shadow 0.2s;
+            padding-top: 5px;
+        }
+        
+        .substance-box .ph-value {
+            font-size: 24px;
+            margin-top: 5px;
+        }
+        
+        .substance-box:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        
+        .controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 20px;
+        }
+        
+        #submit-btn {
+            padding: 10px 20px;
+            background-color: #2ecc71;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            opacity: 0.5;
+            pointer-events: none;
+        }
+        
+        #submit-btn.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        
+        #submit-btn.active:hover {
+            background-color: #27ae60;
+        }
+        
+        .timer {
+            font-size: 18px;
+            font-weight: bold;
+            color: #e74c3c;
+        }
+        
+        .result-panel, .explanation-panel {
+            background-color: #fff;
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            display: none;
+            margin-top: 20px;
+        }
+        
+        .result-panel h2 {
+            margin-top: 0;
+            color: #2ecc71;
+        }
+        
+        .explanation-panel h2 {
+            margin-top: 0;
+            color: #e74c3c;
+        }
+        
+        .result-panel .score {
+            font-size: 48px;
+            font-weight: bold;
+            margin: 20px 0;
+            color: #3498db;
+        }
+        
+        .result-panel button, .explanation-panel button {
+            padding: 10px 20px;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        
+        .result-panel button:hover, .explanation-panel button:hover {
+            background-color: #2980b9;
+        }
+        
+        .ph-scale {
+            display: flex;
+            justify-content: space-between;
+            margin: 20px 0;
+            padding: 10px;
+            background: linear-gradient(to right, #e74c3c, #f39c12, #f1c40f, #2ecc71, #3498db, #9b59b6);
+            border-radius: 8px;
+            color: #fff;
+            font-weight: bold;
+        }
+        
+        .substance-list {
+            text-align: left;
+            margin: 20px 0;
+        }
+        
+        .substance-list li {
+            margin-bottom: 10px;
+        }
+        
+        .dragging {
+            opacity: 0.6;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-title">Sort Substances by pH</div>
+    <div class="game-area">
+        <div class="controls">
+            <div>Time left: <span class="timer" id="timer">100</span> seconds</div>
+            <button id="submit-btn">Submit Answer</button>
+        </div>
+        
+        <div class="container" id="initial-container">
+            <div class="container-title">Substances:</div>
+            <div id="initial-substances"></div>
+        </div>
+        
+        <div class="container" id="answer-container">
+            <div class="container-title">Arrange from Most Acidic to Most Basic (low pH to high pH):</div>
+            <div id="answer-substances"></div>
+        </div>
+        
+        <div class="result-panel" id="result-panel">
+            <h2>Game Completed!</h2>
+            <p>Your score:</p>
+            <div class="score" id="final-score">0</div>
+            <button id="play-again-btn">Play Again</button>
+        </div>
+        
+        <div class="explanation-panel" id="explanation-panel">
+            <h2>Incorrect Order</h2>
+            <p>Here's an explanation of the pH scale and the correct order:</p>
+            
+            <div class="ph-scale">
+                <span>0</span>
+                <span>2</span>
+                <span>4</span>
+                <span>6</span>
+                <span>7</span>
+                <span>8</span>
+                <span>10</span>
+                <span>12</span>
+                <span>14</span>
+            </div>
+            
+            <p>The pH scale ranges from 0 to 14:</p>
+            <ul class="substance-list" id="explanation-list">
+                <!-- Will be filled dynamically -->
+            </ul>
+            
+            <button id="try-again-btn">Try Again</button>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Game elements
+            const initialContainer = document.getElementById('initial-container');
+            const answerContainer = document.getElementById('answer-container');
+            const initialSubstances = document.getElementById('initial-substances');
+            const answerSubstances = document.getElementById('answer-substances');
+            const submitBtn = document.getElementById('submit-btn');
+            const timerElement = document.getElementById('timer');
+            const resultPanel = document.getElementById('result-panel');
+            const explanationPanel = document.getElementById('explanation-panel');
+            const explanationList = document.getElementById('explanation-list');
+            const finalScoreElement = document.getElementById('final-score');
+            const playAgainBtn = document.getElementById('play-again-btn');
+            const tryAgainBtn = document.getElementById('try-again-btn');
+            
+            // Substances with pH values
+            const substanceDatabase = [
+                { name: "Battery Acid", ph: 1 },
+                { name: "Lemon Juice", ph: 2 },
+                { name: "Vinegar", ph: 3 },
+                { name: "Orange Juice", ph: 4 },
+                { name: "Coffee", ph: 5 },
+                { name: "Milk", ph: 6 },
+                { name: "Pure Water", ph: 7 },
+                { name: "Sea Water", ph: 8 },
+                { name: "Baking Soda", ph: 9 },
+                { name: "Milk of Magnesia", ph: 10 },
+                { name: "Ammonia", ph: 11 },
+                { name: "Soapy Water", ph: 12 },
+                { name: "Bleach", ph: 13 },
+                { name: "Drain Cleaner", ph: 14 }
+            ];
+            
+            // Game variables
+            let gameSubstances = [];
+            let timeLeft = 100;
+            let timerInterval;
+            let gameActive = false;
+            let draggedElement = null;
+            
+            // Initialize game
+            function initGame() {
+                // Reset game state
+                gameSubstances = [];
+                timeLeft = 100;
+                gameActive = true;
+                submitBtn.classList.remove('active');
+                resultPanel.style.display = 'none';
+                explanationPanel.style.display = 'none';
+                initialSubstances.innerHTML = '';
+                answerSubstances.innerHTML = '';
+                timerElement.textContent = timeLeft;
+                
+                // Select 5 random substances
+                const shuffled = [...substanceDatabase].sort(() => 0.5 - Math.random());
+                gameSubstances = shuffled.slice(0, 5);
+                
+                // Create substance boxes
+                gameSubstances.forEach(substance => {
+                    const box = createSubstanceBox(substance);
+                    initialSubstances.appendChild(box);
+                });
+                
+                // Start timer
+                timerInterval = setInterval(updateTimer, 1000);
+                
+                // Check if order is correct when substances are moved
+                checkOrder();
+            }
+            
+            // Create a draggable substance box
+            function createSubstanceBox(substance) {
+                const box = document.createElement('div');
+                box.className = 'substance-box';
+                box.innerHTML = `${substance.name}<br><span class="ph-value">pH ${substance.ph}</span>`;
+                box.setAttribute('draggable', true);
+                box.dataset.ph = substance.ph;
+                
+                box.addEventListener('dragstart', function(e) {
+                    draggedElement = this;
+                    setTimeout(() => this.classList.add('dragging'), 0);
+                    e.dataTransfer.setData('text/plain', substance.ph);
+                });
+                
+                box.addEventListener('dragend', function() {
+                    this.classList.remove('dragging');
+                });
+                
+                return box;
+            }
+            
+            // Update timer
+            function updateTimer() {
+                if (!gameActive) return;
+                
+                timeLeft--;
+                timerElement.textContent = timeLeft;
+                
+                if (timeLeft <= 0) {
+                    endGame(0);
+                }
+            }
+            
+            // End game and show results
+            function endGame(score) {
+                clearInterval(timerInterval);
+                gameActive = false;
+                
+                finalScoreElement.textContent = score;
+                resultPanel.style.display = 'block';
+                
+                initialContainer.style.pointerEvents = 'none';
+                answerContainer.style.pointerEvents = 'none';
+                submitBtn.classList.remove('active');
+            }
+            
+            // Show explanation panel
+            function showExplanation() {
+                clearInterval(timerInterval);
+                gameActive = false;
+                
+                explanationList.innerHTML = '';
+                
+                // Sort substances by pH for explanation
+                const sortedSubstances = [...gameSubstances].sort((a, b) => a.ph - b.ph);
+                
+                sortedSubstances.forEach(substance => {
+                    const li = document.createElement('li');
+                    li.innerHTML = `<strong>${substance.name} (pH ${substance.ph})</strong>: ${getpHDescription(substance.ph)}`;
+                    explanationList.appendChild(li);
+                });
+                
+                explanationPanel.style.display = 'block';
+                
+                initialContainer.style.pointerEvents = 'none';
+                answerContainer.style.pointerEvents = 'none';
+                submitBtn.classList.remove('active');
+            }
+            
+            // Get pH description
+            function getpHDescription(ph) {
+                if (ph < 7) {
+                    return "Acidic - the lower the pH, the stronger the acid";
+                } else if (ph > 7) {
+                    return "Basic - the higher the pH, the stronger the base";
+                } else {
+                    return "Neutral - neither acidic nor basic";
+                }
+            }
+            
+            // Check if substances are in correct order
+            function checkOrder() {
+                if (!gameActive) return;
+                
+                const boxes = answerSubstances.querySelectorAll('.substance-box');
+                
+                // If there are not 5 boxes in the answer container, order is incomplete
+                if (boxes.length !== 5) {
+                    submitBtn.classList.remove('active');
+                    return false;
+                }
+                
+                // Check if substances are in ascending pH order
+                let isCorrect = true;
+                let prevValue = 0;
+                
+                boxes.forEach(box => {
+                    const value = parseInt(box.dataset.ph);
+                    if (value <= prevValue && prevValue !== 0) {
+                        isCorrect = false;
+                    }
+                    prevValue = value;
+                });
+                
+                if (isCorrect) {
+                    submitBtn.classList.add('active');
+                } else {
+                    submitBtn.classList.remove('active');
+                }
+                
+                return isCorrect;
+            }
+            
+            // Set up drag and drop functionality
+            initialContainer.addEventListener('dragover', function(e) {
+                e.preventDefault();
+            });
+            
+            answerContainer.addEventListener('dragover', function(e) {
+                e.preventDefault();
+            });
+            
+            initialContainer.addEventListener('drop', function(e) {
+                e.preventDefault();
+                if (draggedElement && draggedElement.parentNode === answerSubstances) {
+                    initialSubstances.appendChild(draggedElement);
+                    checkOrder();
+                }
+            });
+            
+            answerContainer.addEventListener('drop', function(e) {
+                e.preventDefault();
+                if (draggedElement) {
+                    // Handle repositioning within answer container
+                    if (draggedElement.parentNode === answerSubstances) {
+                        const afterElement = getDragAfterElement(answerSubstances, e.clientX);
+                        if (afterElement) {
+                            answerSubstances.insertBefore(draggedElement, afterElement);
+                        } else {
+                            answerSubstances.appendChild(draggedElement);
+                        }
+                    } else {
+                        // Move from initial to answer container
+                        answerSubstances.appendChild(draggedElement);
+                    }
+                    checkOrder();
+                }
+            });
+            
+            // Determine position for dragged element
+            function getDragAfterElement(container, x) {
+                const draggableElements = [...container.querySelectorAll('.substance-box:not(.dragging)')];
+                
+                return draggableElements.reduce((closest, child) => {
+                    const box = child.getBoundingClientRect();
+                    const offset = x - box.left - box.width / 2;
+                    
+                    if (offset < 0 && offset > closest.offset) {
+                        return { offset: offset, element: child };
+                    } else {
+                        return closest;
+                    }
+                }, { offset: Number.NEGATIVE_INFINITY }).element;
+            }
+            
+            // Submit button click handler
+            submitBtn.addEventListener('click', function() {
+                if (checkOrder()) {
+                    const score = Math.max(0, 100 - (100 - timeLeft));
+                    endGame(score);
+                } else {
+                    showExplanation();
+                }
+            });
+            
+            // Play again button click handler
+            playAgainBtn.addEventListener('click', function() {
+                initialContainer.style.pointerEvents = 'auto';
+                answerContainer.style.pointerEvents = 'auto';
+                initGame();
+            });
+            
+            // Try again button click handler
+            tryAgainBtn.addEventListener('click', function() {
+                initialContainer.style.pointerEvents = 'auto';
+                answerContainer.style.pointerEvents = 'auto';
+                explanationPanel.style.display = 'none';
+                initGame();
+            });
+            
+            // Initialize the game
+            initGame();
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Acid or Base? Test Your Speed!</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: Arial, sans-serif; background: #f0f4f8; color: #333; display: flex; flex-direction: column; align-items: center; min-height: 100vh; }
+    .container { width: 100%; max-width: 480px; padding: 20px; }
+    .center { text-align: center; }
+    button, select {
+      cursor: pointer; border: none; border-radius: 4px;
+      padding: 12px 20px; font-size: 16px;
+    }
+    .btn-primary { background: #1e90ff; color: #fff; }
+    .btn-primary:hover { background: #1c86ee; }
+    .btn-secondary { background: #eee; color: #333; margin: 0 5px; }
+    .btn-secondary:hover { background: #ddd; }
+    #timer { font-size: 24px; font-weight: bold; }
+    #question-card {
+      background: #fff; padding: 30px 20px; border-radius: 8px;
+      margin: 20px 0; box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    }
+    .choices { display: flex; justify-content: center; flex-wrap: wrap; margin-top: 20px; }
+    .progress { display: flex; justify-content: space-between; margin-top: 10px; }
+    .progress-bar {
+      flex: 1; height: 8px; background: #ddd; margin: 0 2px;
+      border-radius: 4px;
+    }
+    .progress-bar.correct { background: #4caf50; }
+    .progress-bar.wrong { background: #f44336; }
+    #feedback { font-size: 18px; margin-top: 10px; min-height: 24px; }
+    #modal {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.6); display: none;
+      align-items: center; justify-content: center;
+    }
+    #modal .dialog {
+      background: #fff; padding: 20px; border-radius: 8px;
+      text-align: center; width: 90%; max-width: 320px;
+    }
+    #modal .dialog h2 { margin-bottom: 10px; }
+    #modal .dialog p { margin-bottom: 20px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div id="landing" class="center">
+      <h1>Acid or Base?<br/>Test Your Speed!</h1>
+      <button id="start-btn" class="btn-primary">Start Game</button>
+      <p>Answer ≥ target to pass each level. 15s per question.</p>
+    </div>
+
+    <div id="game" style="display:none;">
+      <div class="center">
+        <div>Stage <span id="stage-num">1</span> / 5</div>
+        <div class="progress" id="progress"></div>
+      </div>
+      <div class="center" style="margin-top:15px;">
+        <span id="timer">15</span>s left
+      </div>
+      <div id="question-card" class="center">
+        <h2 id="substance-name">--</h2>
+      </div>
+      <div class="choices" id="choices"></div>
+      <button id="submit-btn" class="btn-primary" style="display:none;">Submit</button>
+      <div id="feedback" class="center"></div>
+    </div>
+  </div>
+
+  <div id="modal">
+    <div class="dialog">
+      <h2 id="modal-title">Stage Passed!</h2>
+      <p id="modal-text">Score: --</p>
+      <button id="modal-btn" class="btn-primary">Next</button>
+    </div>
+  </div>
+
+  <script>
+    const gameData = [
+      { items: [
+          { name:"Lemon juice", correct:"acidic" },{ name:"Soap", correct:"basic" },
+          { name:"Water", correct:"neutral" },{ name:"Vinegar", correct:"acidic" },
+          { name:"Baking soda", correct:"basic" },{ name:"Tomato juice", correct:"acidic" },
+          { name:"Milk", correct:"neutral" },{ name:"Bleach", correct:"basic" },
+          { name:"Coffee", correct:"acidic" },{ name:"Pure water", correct:"neutral" }
+        ], target:8 },
+      { items: [
+          { name:"Toothpaste", correct:"basic" },{ name:"Cola drink", correct:"acidic" },
+          { name:"Shampoo", correct:"acidic" },{ name:"Ammonia cleaner", correct:"basic" },
+          { name:"Rainwater", correct:"acidic" },{ name:"Antacid tablet", correct:"basic" },
+          { name:"Stomach acid", correct:"acidic" },{ name:"Egg white", correct:"basic" },
+          { name:"Hand soap", correct:"basic" },{ name:"Black coffee", correct:"acidic" }
+        ], target:8 },
+      { items: [
+          { name:"Lemon juice", correct:"red" },{ name:"Bleach", correct:"blue" },
+          { name:"Distilled water", correct:"no change" },{ name:"Vinegar", correct:"red" },
+          { name:"Baking soda solution", correct:"blue" },{ name:"Soda drink", correct:"red" },
+          { name:"Milk", correct:"no change" },{ name:"Detergent", correct:"blue" },
+          { name:"Tomato juice", correct:"red" },{ name:"Drain cleaner", correct:"blue" }
+        ], target:7 },
+      { items: [
+          { name:"Vinegar", correct:"pH 2–3" },{ name:"Soap", correct:"pH 9–10" },
+          { name:"Water", correct:"pH 7" },{ name:"Orange juice", correct:"pH 3–4" },
+          { name:"Detergent", correct:"pH 10–11" },{ name:"Battery acid", correct:"pH 0–1" },
+          { name:"Ammonia", correct:"pH 11–12" },{ name:"Coffee", correct:"pH 5–6" },
+          { name:"Baking soda", correct:"pH 8–9" },{ name:"Milk", correct:"pH 6–7" }
+        ], target:7 },
+      { items: [
+          { name:"Vinegar + baking soda → ?", correct:"Carbon dioxide" },
+          { name:"Acid + base → ?", correct:"Salt and water" },
+          { name:"Acid diluted → pH ?", correct:"Increases" },
+          { name:"Base diluted → pH ?", correct:"Decreases" },
+          { name:"Process name?", correct:"Neutralization" },
+          { name:"Acids release?", correct:"H⁺ ions" },
+          { name:"Bases release?", correct:"OH⁻ ions" },
+          { name:"Reaction heat?", correct:"Increases" },
+          { name:"Blue litmus turns?", correct:"Red" },
+          { name:"Red litmus turns?", correct:"Blue" }
+        ], target:6 }
+    ];
+
+    let stage=1, idx=0, score=0, timer, timeLeft=15;
+    const landing = document.getElementById('landing'),
+          game = document.getElementById('game'),
+          startBtn = document.getElementById('start-btn'),
+          stageNum = document.getElementById('stage-num'),
+          progress = document.getElementById('progress'),
+          timerEl = document.getElementById('timer'),
+          nameEl = document.getElementById('substance-name'),
+          choicesEl = document.getElementById('choices'),
+          submitBtn = document.getElementById('submit-btn'),
+          feedbackEl = document.getElementById('feedback'),
+          modal = document.getElementById('modal'),
+          mTitle = document.getElementById('modal-title'),
+          mText = document.getElementById('modal-text'),
+          mBtn = document.getElementById('modal-btn');
+
+    startBtn.onclick = () => {
+      landing.style.display='none';
+      startStage();
+    };
+
+    mBtn.onclick = () => {
+      modal.style.display='none';
+      if(stage===5 && score >= gameData[stage-1].target){
+        stage = 1;
+        landing.style.display='block';
+        return;
+      }
+      if(score >= gameData[stage-1].target) stage++;
+      startStage();
+    };
+
+    submitBtn.onclick = () => {
+      const sel = choicesEl.querySelector('select');
+      if(sel) answer(sel.value);
+    };
+
+    function startStage(){
+      idx=0; score=0;
+      stageNum.textContent=stage;
+      shuffle(gameData[stage-1].items);
+      buildProgress();
+      renderChoices();
+      game.style.display='';
+      nextQuestion();
+    }
+
+    function buildProgress(){
+      progress.innerHTML='';
+      gameData[stage-1].items.forEach(_=>{
+        const bar=document.createElement('div');
+        bar.className='progress-bar';
+        progress.appendChild(bar);
+      });
+    }
+
+    function renderChoices(){
+      choicesEl.innerHTML='';
+      submitBtn.style.display='none';
+      let opts;
+      if(stage===3){
+        opts=[{l:'Red',v:'red'},{l:'No Change',v:'no change'},{l:'Blue',v:'blue'}];
+      } else if(stage<=2){
+        opts=[{l:'Acidic',v:'acidic'},{l:'Neutral',v:'neutral'},{l:'Basic',v:'basic'}];
+      } else {
+        const all = gameData[stage-1].items.map(i=>i.correct);
+        opts = shuffle([...new Set(all)]).map(v=>({l:v, v}));
+      }
+      if(stage<=3){
+        opts = shuffle(opts);
+        opts.forEach(o=>{
+          const btn=document.createElement('button');
+          btn.className='btn-secondary';
+          btn.textContent=o.l;
+          btn.onclick=()=>answer(o.v);
+          choicesEl.appendChild(btn);
+        });
+      } else {
+        const sel = document.createElement('select');
+        const ph = document.createElement('option');
+        ph.value=''; ph.textContent='Select...'; ph.disabled=true; ph.selected=true;
+        sel.appendChild(ph);
+        opts.forEach(o=>{
+          const opt=document.createElement('option');
+          opt.value=o.v; opt.textContent=o.l;
+          sel.appendChild(opt);
+        });
+        choicesEl.appendChild(sel);
+        submitBtn.style.display='inline-block';
+      }
+    }
+
+    function nextQuestion(){
+      const items=gameData[stage-1].items;
+      if(idx>=items.length) return endStage();
+      nameEl.textContent=items[idx].name;
+      feedbackEl.textContent='';
+      resetTimer(); startTimer();
+    }
+
+    function answer(val){
+      stopTimer();
+      const cur=gameData[stage-1].items[idx];
+      const ok=(val===cur.correct);
+      if(ok){
+        score++;
+        feedbackEl.textContent='✅ Correct!';
+        progress.children[idx].classList.add('correct');
+      } else {
+        feedbackEl.textContent=`❌ Wrong! It’s ${cur.correct}.`;
+        progress.children[idx].classList.add('wrong');
+      }
+      idx++;
+      setTimeout(nextQuestion, 800);
+    }
+
+    function endStage(){
+      game.style.display='none';
+      modal.style.display='flex';
+      const total=gameData[stage-1].items.length;
+      const passed=score >= gameData[stage-1].target;
+
+      if(stage === 5 && passed){
+        mTitle.textContent = '🎉 Congratulations! You Completed All Stages!';
+        mBtn.textContent = 'Back to Start';
+      } else {
+        mTitle.textContent = passed ? 'Stage Passed!' : 'Stage Failed';
+        mBtn.textContent = passed ? 'Next Stage' : 'Try Again';
+      }
+
+      mText.textContent = `You got ${score}/${total} (target ${gameData[stage-1].target})`;
+    }
+
+    function startTimer(){
+      timeLeft=15; timerEl.textContent=timeLeft;
+      timer=setInterval(()=>{
+        timeLeft--; timerEl.textContent=timeLeft;
+        if(timeLeft<=0){ clearInterval(timer); answer(null); }
+      },1000);
+    }
+
+    function stopTimer(){ clearInterval(timer); }
+    function resetTimer(){ stopTimer(); timerEl.textContent='15'; }
+
+    function shuffle(a){
+      for(let i=a.length-1;i>0;i--){
+        const j=Math.floor(Math.random()*(i+1));
+        [a[i],a[j]]=[a[j],a[i]];
+      }
+      return a;
+    }
+  </script>
+</body>
+</html>
